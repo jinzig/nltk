@@ -1,0 +1,78 @@
+from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.corpus import stopwords
+from collections import defaultdict
+from string import punctuation
+from heapq import nlargest
+
+stopwords = set(stopwords.words('english') + list(punctuation))
+max_cut = 0.9
+min_cut = 0.1
+
+"""计算每个词frequency
+word_sent 是已经分好词的列表
+返回字典freq[]
+freq[w]代表w的频率"""
+
+def compute_fequencies(word_sent):
+    """defaultdict 和普通dict区别是他可以设置default 值 参数是int 默认值0"""
+    freq =  defaultdict(int)
+
+    #统计词频
+    for s in word_sent:
+        for word in s:
+            # stopwords
+            if word not in stopwords:
+                freq[word] += 1
+    #得出最高频次m
+    m = float(max(freq.values()))
+    #所有词频除以m
+    for w in list(freq.keys()):
+        freq[w] = freq[w]/m
+        if freq[w] >= max_cut or freq[w] <= min_cut:
+            del freq[w]
+    return freq
+
+def summarize(text, n):
+    """text是输入的文本，n是摘要的句子个数
+    返回包含摘要的列表"""
+    #分句子
+    sents = sent_tokenize(text)
+    assert n <= len(sents)
+
+    #分词
+    word_sent = [word_tokenize(s.lower()) for s in sents]
+
+    #freq 是一个词和词重要性词典
+    freq = compute_fequencies(word_sent)
+    #ranking 是句子和句子重要性词典
+    ranking = defaultdict(int)
+    for i, word in enumerate(word_sent):
+        for w in word:
+            if w in freq:
+                ranking[i] += freq[w]
+    sents_idx = rank(ranking, n)
+    return [sents[j] for j in sents_idx]
+
+
+"""
+考虑到句子比较多的情况
+用遍历的方式找最大的n个数比较慢
+我们这里调用heapq中的函数
+创建一个最小堆来完成这个功能
+返回的是最小的n个数所在的位置
+"""
+
+def rank(ranking, n):
+    return  nlargest(n, ranking, key=ranking.get)
+
+if __name__ == '__main__':
+    with open("C:/Users/slash/Desktop/news.txt", "r") as myfile:
+        text = myfile.read().replace('\n', ' ~~~~~~ ~~~~~~')
+    res = summarize(text, 2)
+    for i in range(len(res)):
+        print(res[i])
+
+
+
+
+
